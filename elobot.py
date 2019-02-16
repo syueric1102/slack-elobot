@@ -234,7 +234,7 @@ class EloBot(object):
 def get_channel_id(slack_client, channel_name):
     channels = slack_client.api_call("channels.list")
     for channel in channels['channels']:
-        print channel['name']
+				#print channel['name']
         if channel['name'] == channel_name:
             return channel['id']
 
@@ -247,4 +247,5 @@ with open('config.json') as config_data:
 slack_client = SlackClient(config['slack_token'])
 db.connect()
 db.create_tables([Player, Match])
+print (slack_client, config)
 EloBot(slack_client, get_channel_id(slack_client, config['channel']), config)
