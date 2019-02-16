@@ -9,13 +9,14 @@ from dateutil import tz
 
 from models import db, Player, Match
 
-SIGNUP_REGEX = re.compile('Sign me up', re.IGNORECASE)
-WINNER_REGEX = re.compile('^I\s+(crushed|rekt|beat|whooped)\s+<@([A-z0-9]*)>\s+(\d{1,2})-(\d{1,2})\s*(,\s*(\d{1,2})-(\d{1,2}))*', re.IGNORECASE)
+SIGNUP_REGEX = re.compile('signup', re.IGNORECASE)
+WINNER_REGEX = re.compile('^I\s+(beat)\s+<@([A-z0-9]*)>\s+(\d{1,2})-(\d{1,2})\s*(,\s*(\d{1,2})-(\d{1,2}))*', re.IGNORECASE)
 CONFIRM_REGEX = re.compile('Confirm (\d+)', re.IGNORECASE)
 CONFIRM_ALL_REGEX = re.compile('Confirm all', re.IGNORECASE)
 DELETE_REGEX = re.compile('Delete (\d+)', re.IGNORECASE)
 LEADERBOARD_REGEX = re.compile('Print leaderboard', re.IGNORECASE)
 UNCONFIRMED_REGEX = re.compile('Print unconfirmed', re.IGNORECASE)
+RESET_REGEX = re.compile('reset leaderboard', re.IGNORECASE)
 
 from_zone = tz.gettz('UTC')
 to_zone = tz.gettz('America/Los_Angeles')
@@ -80,6 +81,8 @@ class EloBot(object):
                         self.print_leaderboard()
                     elif UNCONFIRMED_REGEX.match(message['text']):
                         self.print_unconfirmed()
+                    elif RESET_REGEX.match(message['text']):
+                        self.reset_leaderboard()
             self.heartbeat()
             time.sleep(0.1)
 
@@ -191,9 +194,16 @@ class EloBot(object):
         for player in Player.select().where((Player.wins + Player.losses) > 0).order_by(Player.rating.desc()).limit(25):
             win_streak = self.get_win_streak(player.slack_id)
             streak_text = ('(won ' + str(win_streak) + ' in a row)') if win_streak >= min_streak_len else ''
-            table.append(['<@' + player.slack_id + '>', player.rating, player.wins, player.losses, streak_text])
+            table.append(['<@' + (player.slack_id).replace(' ', '_') + '>', player.rating, player.wins, player.losses, streak_text])
 
         self.talk('```' + tabulate(table, headers=['Name', 'ELO', 'Wins', 'Losses', 'Streak']) + '```')
+
+    def reset_leaderboard(self):
+			for match in Match.select():
+				match.delete_instance()
+			for player in Player.select():
+				player.delete_instance()	
+			self.talk('```' + 'leaderboard cleared' + '```')
 
     def print_unconfirmed(self):
         table = []
@@ -223,8 +233,8 @@ class EloBot(object):
 
 def get_channel_id(slack_client, channel_name):
     channels = slack_client.api_call("channels.list")
-
     for channel in channels['channels']:
+        print channel['name']
         if channel['name'] == channel_name:
             return channel['id']
 
@@ -236,5 +246,5 @@ with open('config.json') as config_data:
 
 slack_client = SlackClient(config['slack_token'])
 db.connect()
-db.create_tables([Player, Match], True)
+db.create_tables([Player, Match])
 EloBot(slack_client, get_channel_id(slack_client, config['channel']), config)
