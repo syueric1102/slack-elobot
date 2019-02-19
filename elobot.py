@@ -66,7 +66,6 @@ class EloBot(object):
 
             for message in messages:
                 if message.get('type', False) == 'message' and message.get('channel', False) == self.channel and message.get('text', False):
-                    #print message #Useful for debugging
                     if SIGNUP_REGEX.match(message['text']):
                         self.sign_up(message)
                     elif WINNER_REGEX.match(message['text']):
@@ -199,11 +198,11 @@ class EloBot(object):
         self.talk('```' + tabulate(table, headers=['Name', 'ELO', 'Wins', 'Losses', 'Streak']) + '```')
 
     def reset_leaderboard(self):
-			for match in Match.select():
-				match.delete_instance()
-			for player in Player.select():
-				player.delete_instance()	
-			self.talk('```' + 'leaderboard cleared' + '```')
+        for match in Match.select():
+            match.delete_instance()
+        for player in Player.select():
+            player.delete_instance()	
+        self.talk('```' + 'leaderboard cleared' + '```')
 
     def print_unconfirmed(self):
         table = []
@@ -234,7 +233,6 @@ class EloBot(object):
 def get_channel_id(slack_client, channel_name):
     channels = slack_client.api_call("channels.list")
     for channel in channels['channels']:
-				#print channel['name']
         if channel['name'] == channel_name:
             return channel['id']
 
@@ -247,5 +245,4 @@ with open('config.json') as config_data:
 slack_client = SlackClient(config['slack_token'])
 db.connect()
 db.create_tables([Player, Match])
-print (slack_client, config)
 EloBot(slack_client, get_channel_id(slack_client, config['channel']), config)
