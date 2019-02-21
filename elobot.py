@@ -89,7 +89,6 @@ class EloBot(object):
         if self.is_bot(message['user']):
             self.talk('Nice try, <@' + message['user'] + '>: ' + 'No bots allowed!')
             return
-
         try:
             player = Player.create(slack_id=message['user'])
             self.talk('<@' + message['user'] + '>: ' + 'You\'re all signed up. Good luck!')
@@ -195,11 +194,13 @@ class EloBot(object):
         for player in relevant_player_list:
             win_streak = self.get_win_streak(player.slack_id)
             streak_text = ('(won ' + str(win_streak) + ' in a row)') if win_streak >= min_streak_len else ''
-            slack_name = (player.slack_id).replace(' ', '_')
-            padded_slack_name = slack_name.ljust(len(longest_name), '_')
-            table.append(['<@' + padded_slack_name + '>', player.rating, player.wins, player.losses, streak_text])
+            #slack_name = (player.slack_id).replace(' ', '_')
+            #padded_slack_name = slack_name.ljust(len(longest_name), '_')
+            slack_name = self.get_user_name(player.slack_id) 
+            #print(slack_name)
+            table.append([slack_name, player.rating, player.wins, player.losses, streak_text])
 
-        self.talk('```' + tabulate(table, headers=['Name', 'ELO', 'Wins', 'Losses', 'Streak']) + '```')
+        self.talk('```' + tabulate(table, headers=['Name', 'ELO', 'Wins', 'Losses', 'Streak'], tablefmt="fancy_grid") + '```')
 
     def reset_leaderboard(self):
         for match in Match.select():
@@ -218,10 +219,13 @@ class EloBot(object):
             match_played_pst = match_played_utc.astimezone(to_zone)
             table.append([match.id, '<@' + match.loser.slack_id + '>', '<@' + match.winner.slack_id + '>', str(match.winner_score) + '-' + str(match.loser_score), match_played_pst.strftime('%m/%d/%y %I:%M %p')])
 
-        self.talk('```' + tabulate(table, headers=['Match', 'Needs to Confirm', 'Opponent', 'Score', 'Date']) + '```')
+        self.talk('```' + tabulate(table, headers=['Match', 'Needs to Confirm', 'Opponent', 'Score', 'Date'], tablefmt="fancy_grid") + '```')
 
     def is_bot(self, user_id):
         return self.slack_client.api_call('users.info', user=user_id)['user']['is_bot']
+	
+    def get_user_name(self, user_id):
+        return self.slack_client.api_call('users.info', user=user_id)['user']['name']
 
     def get_win_streak(self, player_slack_id):
         win_streak = 0
