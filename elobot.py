@@ -189,11 +189,15 @@ class EloBot(object):
     def print_leaderboard(self):
         table = []
         min_streak_len = config['min_streak_length']
-
-        for player in Player.select().where((Player.wins + Player.losses) > 0).order_by(Player.rating.desc()).limit(25):
+        relevant_player_list = Player.select().where((Player.wins + Player.losses) > 0).order_by(Player.rating.desc()).limit(25)
+        player_names = [player.slack_id for player in relevant_player_list]
+        longest_name = sorted(player_names, key=len)[-1]
+        for player in relevant_player_list:
             win_streak = self.get_win_streak(player.slack_id)
             streak_text = ('(won ' + str(win_streak) + ' in a row)') if win_streak >= min_streak_len else ''
-            table.append(['<@' + (player.slack_id).replace(' ', '_') + '>', player.rating, player.wins, player.losses, streak_text])
+            slack_name = (player.slack_id).replace(' ', '_')
+            padded_slack_name = slack_name.ljust(len(longest_name), '_')
+            table.append(['<@' + padded_slack_name + '>', player.rating, player.wins, player.losses, streak_text])
 
         self.talk('```' + tabulate(table, headers=['Name', 'ELO', 'Wins', 'Losses', 'Streak']) + '```')
 
