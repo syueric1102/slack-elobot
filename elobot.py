@@ -193,7 +193,14 @@ class EloBot(object):
         longest_name = sorted(player_names, key=len)[-1]
         for player in relevant_player_list:
             win_streak = self.get_win_streak(player.slack_id)
-            streak_text = ('(won ' + str(win_streak) + ' in a row)') if win_streak >= min_streak_len else ''
+            lose_streak = self.get_lose_streak(player.slack_id)
+
+            if (win_streak >= min_streak_len):
+                streak_text = ('(won ' + str(win_streak) + ' in a row)')
+            elif (lose_streak >= min_streak_len):
+                streak_text = ('(lost ' + str(lose_streak) + ' in a row)')
+            else:
+                streak_text = ''
             #slack_name = (player.slack_id).replace(' ', '_')
             #padded_slack_name = slack_name.ljust(len(longest_name), '_')
             slack_name = self.get_user_name(player.slack_id) 
@@ -237,6 +244,17 @@ class EloBot(object):
                 break
 
         return win_streak
+
+    def get_lose_streak(self, player_slack_id):
+        lose_streak = 0
+        matches = Match.select().where(Match.pending == False, (player_slack_id == Match.winner) | (player_slack_id == Match.loser)).order_by(Match.played.desc())
+        for match in matches:
+            if (player_slack_id == match.loser_id):
+                lose_streak = lose_streak + 1
+            else:
+                break
+
+        return lose_streak
 
 def get_channel_id(slack_client, channel_name):
     channels = slack_client.api_call("channels.list")
